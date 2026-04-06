@@ -16,6 +16,10 @@ const Dashboard = () => {
       return;
     }
     fetchVideos();
+    
+    // Poll for status updates every 5 seconds
+    const interval = setInterval(fetchVideos, 5000);
+    return () => clearInterval(interval);
   }, [navigate]);
 
   const fetchVideos = async () => {

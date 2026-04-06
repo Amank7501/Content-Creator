@@ -39,8 +39,8 @@ const Preview = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {clips.map((clip, i) => {
-            const filename = clip.localUrl ? clip.localUrl.split('\\').pop().split('/').pop() : '';
-            const videoUrl = `http://localhost:5000/api/videos/serve/${filename}`;
+            // Use dynamically assigned MinIO presigned URL
+            const videoUrl = clip.url || '';
 
             return (
               <div key={clip.id} className="card group flex flex-col h-full bg-surface border-white/5">
