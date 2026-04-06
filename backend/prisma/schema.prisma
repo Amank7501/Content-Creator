@@ -1,0 +1,57 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                    String   @id @default(uuid())
+  googleId              String   @unique
+  email                 String   @unique
+  name                  String
+  avatar                String?
+  youtubeAccessToken    String?
+  youtubeRefreshToken   String?
+  videos                Video[]
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+model Video {
+  id               String   @id @default(uuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id])
+  localUrl         String   // Changed from s3_url since we're storing locally
+  originalFilename String
+  transcriptJson   String?  @db.Text
+  status           String   @default("pending") // pending, transcribing, clipping, processed, error
+  clips            Clip[]
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Clip {
+  id        String   @id @default(uuid())
+  videoId   String
+  video     Video    @relation(fields: [videoId], references: [id])
+  startTime Float
+  endTime   Float
+  title     String
+  reason    String?
+  localUrl  String?
+  status    String   @default("pending") // pending, rendering, completed, error
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Job {
+  id        String   @id @default(uuid())
+  type      String   // transcribe, clip, render, upload
+  status    String   @default("pending") // pending, processing, completed, failed
+  data      Json
+  error     String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

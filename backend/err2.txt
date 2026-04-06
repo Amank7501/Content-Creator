@@ -1,0 +1,12 @@
+PrismaClientConstructorValidationError: Unknown property url provided to PrismaClient constructor.
+Read more at https://pris.ly/d/client-constructor
+    at jl (C:\Users\Aman\Desktop\Small Content Creator\backend\node_modules\@prisma\client\runtime\client.js:66:3832)
+    at new t (C:\Users\Aman\Desktop\Small Content Creator\backend\node_modules\@prisma\client\runtime\client.js:70:1808)
+    at Object.<anonymous> (C:\Users\Aman\Desktop\Small Content Creator\backend\src\models\prismaClient.js:3:16)
+    at Module._compile (node:internal/modules/cjs/loader:1761:14)
+    at Object..js (node:internal/modules/cjs/loader:1893:10)
+    at Module.load (node:internal/modules/cjs/loader:1481:32)
+    at Module._load (node:internal/modules/cjs/loader:1300:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:245:24)
+    at Module.require (node:internal/modules/cjs/loader:1504:12)
