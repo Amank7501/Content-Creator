@@ -2,7 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const { verifyToken } = require('../middleware/authMiddleware');
-const { uploadVideo, getVideos, uploadClipToYoutube, deleteVideo } = require('../controllers/videoController');
+const { uploadVideo, getVideos, uploadClipToYoutube, deleteVideo, processShortVideo, uploadMusic, generateEditPlanRoute } = require('../controllers/videoController');
 
 const router = express.Router();
 
@@ -28,6 +28,9 @@ router.post('/upload', verifyToken, upload.single('video'), uploadVideo);
 router.get('/', verifyToken, getVideos);
 router.delete('/:videoId', verifyToken, deleteVideo);
 router.post('/youtube/:clipId', verifyToken, uploadClipToYoutube);
+router.post('/process-short', verifyToken, processShortVideo);
+router.post('/upload-music', verifyToken, upload.single('music'), uploadMusic);
+router.post('/generate-edit-plan', verifyToken, generateEditPlanRoute);
 
 // Optionally, endpoint to serve static processed videos / clips (e.g., streaming) //
 router.use('/serve', express.static(path.join(__dirname, '../../uploads')));

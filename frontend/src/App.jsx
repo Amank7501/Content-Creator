@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Preview from './pages/Preview';
+import VideoEditor from './pages/VideoEditor';
 
 const App = () => {
   return (
@@ -13,6 +14,7 @@ const App = () => {
           <Route path="/login" element={<Login />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/preview/:id" element={<Preview />} />
+          <Route path="/editor/:id" element={<VideoEditor />} />
         </Routes>
       </div>
     </Router>

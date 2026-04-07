@@ -70,10 +70,17 @@ const Preview = () => {
                     <strong>AI Note:</strong> {clip.reason || "Engaging moment"}
                   </p>
 
-                  <div className="flex gap-2 mt-auto">
+                  <div className="flex flex-wrap gap-2 mt-auto">
                     {/* These wouldn't work perfectly locally without real YT logic, but UI shows the intent */}
                     <button className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded font-medium text-sm flex items-center justify-center gap-2 transition active:scale-95">
                       <Video className="w-4 h-4"/> Upload
+                    </button>
+                    <button 
+                      onClick={() => navigate(`/editor/${clip.id}`, { state: { video: clip } })}
+                      className="bg-primary/20 hover:bg-primary/30 text-primary py-2 px-3 flex items-center justify-center rounded transition active:scale-95"
+                      title="Edit this Short"
+                    >
+                      <span className="text-sm font-medium">Edit</span>
                     </button>
                     <a 
                       href={videoUrl} 

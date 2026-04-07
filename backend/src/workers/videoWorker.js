@@ -13,6 +13,55 @@ const MAX_VIDEO_DURATION_MINUTES = parseInt(process.env.MAX_VIDEO_DURATION_MINUT
 
 const worker = new Worker('videoProcessing', async (job) => {
   console.log(`Processing job ${job.id} of type ${job.name}`);
+
+  if (job.name === 'process_short') {
+    const { videoId, sourceLocalUrl, musicLocalUrl, trimStart, trimEnd, captions } = job.data;
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), `video_short_${videoId}_`));
+    const localVideoPath = path.join(tempDir, `original_${videoId}.mp4`);
+    const localMusicPath = musicLocalUrl ? path.join(tempDir, `music_${videoId}.mp3`) : null;
+    const outputPath = path.join(tempDir, `processed_${videoId}.mp4`);
+
+    try {
+      console.log(`[Job ${job.id}] Downloading source video from MinIO...`);
+      await minioService.downloadFileFromMinio(sourceLocalUrl, localVideoPath);
+      
+      if (musicLocalUrl) {
+        console.log(`[Job ${job.id}] Downloading music from MinIO...`);
+        await minioService.downloadFileFromMinio(musicLocalUrl, localMusicPath);
+      }
+
+      await prisma.video.update({ where: { id: videoId }, data: { status: 'rendering' } });
+      console.log(`[Job ${job.id}] Rendering customized short...`);
+
+      const { createEditedShort } = require('../services/ffmpeg.service');
+      await createEditedShort(localVideoPath, localMusicPath, outputPath, {
+        trimStart, trimEnd, captions
+      });
+
+      const uniqueName = `edited_${videoId}_${Date.now()}.mp4`;
+      console.log(`[Job ${job.id}] Uploading customized short to MinIO...`);
+      await minioService.uploadFileToMinio(uniqueName, outputPath, 'video/mp4');
+
+      // Update DB
+      await prisma.video.update({
+        where: { id: videoId },
+        data: {
+          localUrl: uniqueName,
+          status: 'processed'
+        }
+      });
+      
+      console.log(`[Job ${job.id}] Short process completed successfully.`);
+    } catch (error) {
+      console.error(`[Job ${job.id}] Failed short processing:`, error.message);
+      await prisma.video.update({ where: { id: videoId }, data: { status: 'error' } });
+      throw error;
+    } finally {
+      try { fs.rmSync(tempDir, { recursive: true, force: true }); } catch (e) {}
+    }
+    return;
+  }
+
   const { videoId, localUrl } = job.data;
 
   // Create temporary working directory for this video

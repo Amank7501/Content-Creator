@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { UploadCloud, FileVideo, Clock, CheckCircle, AlertCircle, Loader, Trash2 } from 'lucide-react';
+import { UploadCloud, FileVideo, Clock, CheckCircle, AlertCircle, Loader, Trash2, Play } from 'lucide-react';
 
 const Dashboard = () => {
   const [file, setFile] = useState(null);
@@ -139,7 +139,15 @@ const Dashboard = () => {
               <div 
                 key={video.id} 
                 className="card p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:border-primary/50 transition cursor-pointer"
-                onClick={() => video.status === 'processed' && navigate(`/preview/${video.id}`, { state: { video } })}
+                onClick={() => {
+                  if (video.status === 'processed') {
+                    if (video.clips?.length > 0) {
+                      navigate(`/preview/${video.id}`, { state: { video } });
+                    } else if (video.url) {
+                      window.open(video.url, '_blank');
+                    }
+                  }
+                }}
               >
                 <div className="flex items-start gap-4">
                   <div className="w-12 h-12 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -156,10 +164,25 @@ const Dashboard = () => {
                 </div>
                 <div className="flex items-center gap-2 mt-4 md:mt-0">
                   {video.status === 'processed' && (
-                    <button className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg text-sm transition">
-                      View {video.clips?.length || 0} Clips
-                    </button>
+                    video.clips?.length > 0 ? (
+                      <button className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg text-sm transition">
+                        View {video.clips.length} Clips
+                      </button>
+                    ) : (
+                      <button 
+                         onClick={(e) => { e.stopPropagation(); if(video.url) window.open(video.url, '_blank'); }}
+                         className="bg-green-500/20 text-green-400 hover:bg-green-500 hover:text-white px-4 py-2 rounded-lg text-sm transition font-medium flex items-center justify-center gap-1"
+                      >
+                         <Play className="w-4 h-4"/> Play Video
+                      </button>
+                    )
                   )}
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); navigate(`/editor/${video.id}`, { state: { video } }); }}
+                    className="bg-primary/20 text-primary hover:bg-primary hover:text-black px-4 py-2 rounded-lg text-sm transition font-medium"
+                  >
+                    Edit Short
+                  </button>
                   <button
                     onClick={(e) => handleDelete(e, video.id)}
                     className="group hover:bg-red-500/20 text-slate-400 hover:text-red-400 p-2 rounded-lg transition"

@@ -1,6 +1,7 @@
 const prisma = require('../models/prismaClient');
 const { addVideoJob } = require('../queues/videoQueue');
 const minioService = require('../services/minioService');
+const { generateEditPlan } = require('../services/ai.service');
 
 const uploadVideo = async (req, res) => {
   try {
@@ -141,4 +142,138 @@ const deleteVideo = async (req, res) => {
   }
 };
 
-module.exports = { uploadVideo, getVideos, uploadClipToYoutube, deleteVideo };
+const processShortVideo = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { videoUrl, musicUrl, musicType, cuts, trimStart, trimEnd, captions, effects, outputName } = req.body;
+    
+    if (!videoUrl) {
+      return res.status(400).json({ error: 'Missing videoUrl' });
+    }
+
+    // Attempt to extract local filename if a full MinIO url was provided.
+    // If it's already a filename, this is generally safe.
+    const extractLocalUrl = (url) => {
+      if (!url) return null;
+      try {
+        const urlObj = new URL(url);
+        const parts = urlObj.pathname.split('/');
+        return parts[parts.length - 1]; // Assume last part is filename
+      } catch (e) {
+        return url; // Fallback to raw string
+      }
+    };
+
+    const sourceLocalUrl = extractLocalUrl(videoUrl);
+    const musicLocalUrl = extractLocalUrl(musicUrl);
+    
+    // Create new Video to track process state
+    const shortVideo = await prisma.video.create({
+      data: {
+        userId,
+        localUrl: '', // Will be updated by worker
+        originalFilename: outputName || 'Processed_Short.mp4',
+        status: 'pending',
+      },
+    });
+
+    await addVideoJob(shortVideo.id, 'process_short', {
+      sourceLocalUrl,
+      musicLocalUrl,
+      musicType,
+      cuts,
+      trimStart,
+      trimEnd,
+      captions,
+      effects
+    });
+
+    res.status(202).json({
+      message: 'Short processing queued',
+      video: shortVideo
+    });
+  } catch (error) {
+    console.error('Error in processShortVideo:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+const uploadMusic = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No music file provided' });
+    }
+
+    const { filename, path: tempPath, mimetype } = req.file;
+
+    // Upload to MinIO
+    await minioService.uploadFileToMinio(filename, tempPath, mimetype);
+    
+    // Generate URL for response
+    const musicUrl = await minioService.getPresignedUrl(filename);
+    
+    if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
+
+    res.status(201).json({
+      message: 'Music uploaded successfully',
+      musicUrl,
+      localUrl: filename
+    });
+  } catch (error) {
+    console.error('Error in uploadMusic:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+const generateEditPlanRoute = async (req, res) => {
+  try {
+    const { videoId, category, tone } = req.body;
+    
+    if (!videoId || !category) {
+      return res.status(400).json({ error: 'Missing videoId or category' });
+    }
+
+    const video = await prisma.video.findUnique({
+      where: { id: videoId }
+    });
+
+    if (!video) {
+        return res.status(404).json({ error: 'Video not found' });
+    }
+
+    if (!video.transcriptJson) {
+      return res.status(400).json({ error: 'Video transcription is not ready yet. Please wait.' });
+    }
+    
+    const transcriptData = JSON.parse(video.transcriptJson);
+    const transcriptText = transcriptData.text || '';
+
+    const editPlanData = await generateEditPlan(transcriptText, category, tone);
+
+    // Save to DB
+    const editPlan = await prisma.editPlan.create({
+      data: {
+        videoId,
+        category,
+        tone: tone || '',
+        editPlan: editPlanData,
+        status: 'draft'
+      }
+    });
+
+    res.json({ message: 'Edit plan generated successfully', editPlan });
+  } catch (error) {
+    console.error('Error in generateEditPlanRoute:', error);
+    res.status(500).json({ error: error.message || 'Internal Server Error' });
+  }
+};
+
+module.exports = { 
+  uploadVideo, 
+  getVideos, 
+  uploadClipToYoutube, 
+  deleteVideo, 
+  processShortVideo, 
+  uploadMusic,
+  generateEditPlanRoute
+};
